@@ -26,9 +26,13 @@ int main(int argc, char **argv) {
         dim.for_type = Internal::For::Serial;
         s.dims.push_back(dim);
 
-        scheds["blur_x"] = s;
+        scheds["blur_x"] = vec(s);
     }
 
+    /* things to load:
+        - compute level, store level
+        - split 
+     */
     {
         // Fastest way to build split, storage, dims lists:
         Func f; Var x("x"), y("y"), xi("xi"), yi("yi");
@@ -43,7 +47,7 @@ int main(int argc, char **argv) {
         //  Func f("blur_y");
         //  g.compute_at(f, x); // x can be shadowed, blur_y can't
 
-        scheds["blur_y"] = f.function().schedule();
+        scheds["blur_y"] = vec(f.function().schedule());
     }
 
     ImageParam input(UInt(16), 2, "input");

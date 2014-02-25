@@ -3,7 +3,7 @@
 
 #include <Halide.h>
 
-typedef std::map<std::string, Halide::Internal::Schedule> schedule_map;
+typedef std::map<std::string, std::vector<Halide::Internal::Schedule> > schedule_map;
 
 void apply_schedule(const schedule_map &schedules, Halide::Func root);
 

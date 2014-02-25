@@ -100,6 +100,9 @@ void apply_schedule(const schedule_map &schedules, Func root) {
     {
         fprintf(stderr, "Apply schedule to %s\n", it->first.c_str());
         assert(functions.count(it->first));
-        functions[it->first].schedule() = it->second;
+        functions[it->first].schedule() = it->second[0];
+        for (size_t r = 0; r < functions[it->first].reductions().size(); r++) {
+            functions[it->first].reduction_schedule(r) = it->second[r+1];
+        }
     }
 }
