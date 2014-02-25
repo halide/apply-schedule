@@ -14,11 +14,14 @@ TEST_APPS := $(patsubst %.cpp,%,$(TEST_SRCS))
 
 all: $(TEST_CALLS)
 
-ApplySchedule.o: ../ApplySchedule.cpp ../ApplySchedule.h $(HALIDE_INC)
+ApplySchedule.o: ../ApplySchedule.cpp ../ApplySchedule.h ../FindCalls.h $(HALIDE_INC)
 	$(CXX) -fno-rtti -c -I$(HALIDE_INC) $< -o $@
 
-%: %.cpp ApplySchedule.o $(HALIDE_INC) $(HALIDE_LIB)
-	$(CXX) $< ApplySchedule.o -I$(HALIDE_INC) $(HALIDE_LIB) -o $@ -ldl -lpthread
+FindCalls.o: ../FindCalls.cpp ../FindCalls.h $(HALIDE_INC)
+	$(CXX) -fno-rtti -c -I$(HALIDE_INC) $< -o $@
+
+%: %.cpp FindCalls.o ApplySchedule.o $(HALIDE_INC) $(HALIDE_LIB)
+	$(CXX) $< FindCalls.o ApplySchedule.o -I$(HALIDE_INC) $(HALIDE_LIB) -o $@ -ldl -lpthread
 
 clean:
-	$(RM) ApplySchedule.o bilateral_grid bilateral_grid.calls.json
+	$(RM) FindCalls.o ApplySchedule.o bilateral_grid bilateral_grid.calls.json
