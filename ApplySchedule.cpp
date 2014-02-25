@@ -6,7 +6,6 @@
 
 #include "ApplySchedule.h"
 
-#include <map>
 #include <cstdio>
 
 using std::map;
@@ -15,80 +14,48 @@ using std::string;
 using namespace Halide;
 using namespace Halide::Internal;
 
-// TODO: factor this into a common utility library
-/* Find all the internal halide calls in an expr */
-class FindAllCalls : public IRVisitor {
-private:
-    bool recursive;
-public:
-    FindAllCalls(bool recurse = false) : recursive(recurse) {}
+struct FindRecursiveCalls : public IRDeepVisitor {
+    using IRDeepVisitor::visit;
+    map<string, Function> result() { return funcs; }
+};
 
-    map<string, Function> calls;
+/** Construct a map from name to Function definition object for all Halide 
+ *  functions called directly in the definition of the Function f, or 
+ *  indirectly in those functions' definitions, recursively.
+ */
+map<string, Function> find_recursive_calls(Function f) {
+    FindRecursiveCalls all_calls;
+    visit_function(&all_calls, f);
+    return all_calls.result();
+}
 
-    typedef map<string, Function>::iterator iterator;
-
+struct FindCalls : public IRVisitor {
+    map<string, Function> funcs;
     using IRVisitor::visit;
-
-    void include_function(Function f) {
-        iterator iter = calls.find(f.name());
-        if (iter == calls.end()) {
-            calls[f.name()] = f;
-            if (recursive) {
-                // recursively add everything called in the definition of f
-                for (size_t i = 0; i < f.values().size(); i++) {
-                    f.values()[i].accept(this);
-                }
-                // recursively add everything called in the definition of f's update steps
-                for (size_t i = 0; i < f.reductions().size(); i++) {
-                    // Update value definition
-                    for (size_t j = 0; j < f.reductions()[i].values.size(); j++) {
-                        f.reductions()[i].values[j].accept(this);
-                    }
-                    // Update index expressions
-                    for (size_t j = 0; j < f.reductions()[i].args.size(); j++) {
-                        f.reductions()[i].args[j].accept(this);
-                    }
-                    // Reduction domain min/extent expressions
-                    for (size_t j = 0; j < f.reductions()[i].domain.domain().size(); j++) {
-                        f.reductions()[i].domain.domain()[j].min.accept(this);
-                        f.reductions()[i].domain.domain()[j].extent.accept(this);
-                    }
-                }
-            }
-        } else {
-            assert(iter->second.same_as(f) &&
-                   "Can't compile a pipeline using multiple functions with same name");
-        }
-    }
-
+    map<string, Function> result() { return funcs; }
     void visit(const Call *call) {
         IRVisitor::visit(call);
         if (call->call_type == Call::Halide) {
-            include_function(call->func);
-        }
-    }
-
-    void dump_calls(FILE *of) {
-        iterator it = calls.begin();
-        while (it != calls.end()) {
-            fprintf(of, "\"%s\"", it->first.c_str());
-            ++it;
-            if (it != calls.end()) {
-                fprintf(of, ", ");
-            }
+            funcs[call->func.name()] = call->func;
         }
     }
 };
+
+/** Construct a map from name to Function definition object for all Halide 
+ *  functions called directly in the definition of the Function f, including
+ *  in update definitions, update index expressions, and RDom extents.
+ */
+map<string, Function> find_direct_calls(Function f) {
+    FindCalls calls;
+    visit_function(&calls, f);
+    return calls.result();
+}
 
 void apply_schedule(const schedule_map &schedules, Func root) {
     // TODO: this should be encapsulated in a find_all_calls helper
     // extract all the functions called transitively from root, by name
     Function f = root.function();
-    FindAllCalls all_calls(true);
-    for (size_t i = 0; i < f.values().size(); i++) {
-        f.values()[i].accept(&all_calls);
-    }
-    map<string, Function> functions = all_calls.calls;
+    map<string, Function> functions = find_recursive_calls(f);
 
     // add the root function into the environment, too
     functions[f.name()] = f;
