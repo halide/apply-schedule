@@ -38,10 +38,20 @@ public:
                 for (size_t i = 0; i < f.values().size(); i++) {
                     f.values()[i].accept(this);
                 }
-                // recursively add everything called in the definition of f's update step
+                // recursively add everything called in the definition of f's update steps
                 for (size_t i = 0; i < f.reductions().size(); i++) {
+                    // Update value definition
                     for (size_t j = 0; j < f.reductions()[i].values.size(); j++) {
                         f.reductions()[i].values[j].accept(this);
+                    }
+                    // Update index expressions
+                    for (size_t j = 0; j < f.reductions()[i].args.size(); j++) {
+                        f.reductions()[i].args[j].accept(this);
+                    }
+                    // Reduction domain min/extent expressions
+                    for (size_t j = 0; j < f.reductions()[i].domain.domain().size(); j++) {
+                        f.reductions()[i].domain.domain()[j].min.accept(this);
+                        f.reductions()[i].domain.domain()[j].extent.accept(this);
                     }
                 }
             }
