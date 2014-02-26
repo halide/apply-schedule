@@ -5,7 +5,6 @@
 // usually compiled.
 
 #include "ApplySchedule.h"
-#include "FindCalls.h"
 #include <cstdio>
 
 using std::map;
@@ -17,7 +16,7 @@ void apply_schedule(const schedule_map &schedules, Func root) {
     // TODO: this should be encapsulated in a find_all_calls helper
     // extract all the functions called transitively from root, by name
     Function f = root.function();
-    map<string, Function> functions = find_recursive_calls(f);
+    map<string, Function> functions = find_transitive_calls(f);
 
     // add the root function into the environment, too
     functions[f.name()] = f;
